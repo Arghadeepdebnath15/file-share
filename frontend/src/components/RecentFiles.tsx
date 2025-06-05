@@ -13,13 +13,16 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Button,
 } from '@mui/material';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import DownloadIcon from '@mui/icons-material/Download';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
 import { API_URL } from '../config';
+import DeviceManager from './DeviceManager';
 
 interface FileInfo {
   _id: string;
@@ -41,6 +44,19 @@ const RecentFiles: React.FC = () => {
 
   const getDeviceFiles = () => {
     return JSON.parse(localStorage.getItem('deviceFiles') || '[]');
+  };
+
+  const removeFromDeviceFiles = (fileId: string) => {
+    const deviceFiles = getDeviceFiles();
+    const updatedFiles = deviceFiles.filter((id: string) => id !== fileId);
+    localStorage.setItem('deviceFiles', JSON.stringify(updatedFiles));
+  };
+
+  const handleRemoveFile = async (fileId: string) => {
+    if (window.confirm('Remove this file from device history?')) {
+      removeFromDeviceFiles(fileId);
+      await fetchRecentFiles();
+    }
   };
 
   const fetchRecentFiles = async () => {
@@ -74,6 +90,11 @@ const RecentFiles: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleClearHistory = () => {
+    setFiles([]);
+    fetchRecentFiles();
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -98,9 +119,10 @@ const RecentFiles: React.FC = () => {
 
   if (loading) {
     return (
-      <Card sx={{ mt: 3 }}>
+      <Card sx={{ mt: 3, position: 'relative' }}>
+        <DeviceManager onClearHistory={handleClearHistory} onRefresh={fetchRecentFiles} />
         <CardContent>
-          <Typography>Loading recent files...</Typography>
+          <Typography>Loading your files...</Typography>
         </CardContent>
       </Card>
     );
@@ -108,7 +130,8 @@ const RecentFiles: React.FC = () => {
 
   if (error) {
     return (
-      <Card sx={{ mt: 3 }}>
+      <Card sx={{ mt: 3, position: 'relative' }}>
+        <DeviceManager onClearHistory={handleClearHistory} onRefresh={fetchRecentFiles} />
         <CardContent>
           <Typography color="error">{error}</Typography>
         </CardContent>
@@ -118,7 +141,8 @@ const RecentFiles: React.FC = () => {
 
   return (
     <>
-      <Card sx={{ mt: 3 }}>
+      <Card sx={{ mt: 3, position: 'relative' }}>
+        <DeviceManager onClearHistory={handleClearHistory} onRefresh={fetchRecentFiles} />
         <CardContent>
           <Typography variant="h6" gutterBottom>
             Your Files
@@ -172,8 +196,16 @@ const RecentFiles: React.FC = () => {
                         onClick={() => handleDownload(file.filename, file.originalName)}
                         color="primary"
                         title="Download file"
+                        sx={{ mr: 1 }}
                       >
                         <DownloadIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleRemoveFile(file._id)}
+                        color="error"
+                        title="Remove from device history"
+                      >
+                        <DeleteIcon />
                       </IconButton>
                     </Box>
                   </ListItem>
@@ -190,8 +222,8 @@ const RecentFiles: React.FC = () => {
           {selectedFile && (
             <Box sx={{ mt: 2 }}>
               <QRCode 
-                value={`${API_URL}/api/files/download/${selectedFile.filename}`} 
-                size={256} 
+                value={`${API_URL}/api/files/download/${selectedFile.filename}`}
+                size={256}
               />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 Scan this QR code to download {selectedFile.originalName}
