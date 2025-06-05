@@ -15,11 +15,7 @@ import {
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
-
-// Get the local IP address or use localhost as fallback
-const BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000'
-  : `http://${window.location.hostname}:5000`;
+import { API_URL } from '../config';
 
 const FileUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -64,7 +60,7 @@ const FileUpload: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      const response = await axios.post(`${BASE_URL}/api/files/upload`, formData, {
+      const response = await axios.post(`${API_URL}/api/files/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -76,7 +72,7 @@ const FileUpload: React.FC = () => {
         },
       });
       setQrCode(response.data.qrCode);
-      setDownloadUrl(`${BASE_URL}/api/files/download/${response.data.file.filename}`);
+      setDownloadUrl(`${API_URL}/api/files/download/${response.data.file.filename}`);
       setShowQR(true);
     } catch (error: any) {
       console.error('Error uploading file:', error);
