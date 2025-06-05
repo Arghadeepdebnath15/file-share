@@ -19,10 +19,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
-
-const BASE_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
-  : `http://${window.location.hostname}:5000`;
+import { API_URL } from '../config';
 
 interface FileInfo {
   _id: string;
@@ -45,7 +42,7 @@ const RecentFiles: React.FC = () => {
   const fetchRecentFiles = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${BASE_URL}/api/files/recent`);
+      const response = await axios.get(`${API_URL}/api/files/recent`);
       setFiles(response.data);
       setError(null);
     } catch (err) {
@@ -77,7 +74,7 @@ const RecentFiles: React.FC = () => {
   };
 
   const handleDownload = (filename: string, originalName: string) => {
-    window.open(`${BASE_URL}/api/files/download/${filename}`, '_blank');
+    window.open(`${API_URL}/api/files/download/${filename}`, '_blank');
   };
 
   const handleShowQR = (file: FileInfo) => {
@@ -179,7 +176,7 @@ const RecentFiles: React.FC = () => {
           {selectedFile && (
             <Box sx={{ mt: 2 }}>
               <QRCode 
-                value={`${BASE_URL}/api/files/download/${selectedFile.filename}`} 
+                value={`${API_URL}/api/files/download/${selectedFile.filename}`} 
                 size={256} 
               />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>

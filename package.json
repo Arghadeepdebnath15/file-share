@@ -8,7 +8,9 @@
     "server": "nodemon backend/server.js",
     "client": "cd frontend && npm start",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "install-all": "npm install && cd frontend && npm install"
+    "install-all": "npm install && cd frontend && npm install",
+    "heroku-postbuild": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install && npm run build"
   },
   "keywords": [
     "mern",
