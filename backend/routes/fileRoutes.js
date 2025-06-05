@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const QRCode = require('qrcode');
 const File = require('../models/File');
+const RecentHistory = require('../models/RecentHistory');
 
 // Configure multer for file upload with quality preservation
 const storage = multer.diskStorage({
@@ -50,6 +51,22 @@ router.get('/recent', async (req, res) => {
     }
 });
 
+// Get recent files for specific device
+router.get('/recent/:deviceId', async (req, res) => {
+    try {
+        const { deviceId } = req.params;
+        let history = await RecentHistory.findOne({ deviceId }).populate('fileIds');
+        
+        if (!history) {
+            history = { fileIds: [] };
+        }
+
+        res.json(history.fileIds);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching recent files', error: error.message });
+    }
+});
+
 // Upload file and generate QR code
 router.post('/upload', upload.single('file'), async (req, res) => {
     try {
@@ -73,6 +90,25 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         });
 
         await file.save();
+
+        // Add to device's recent history if deviceId is provided
+        const deviceId = req.headers['device-id'];
+        if (deviceId) {
+            await RecentHistory.findOneAndUpdate(
+                { deviceId },
+                { 
+                    $push: { 
+                        fileIds: { 
+                            $each: [file._id],
+                            $position: 0,
+                            $slice: 10
+                        }
+                    }
+                },
+                { upsert: true }
+            );
+        }
+
         res.status(201).json({ file, qrCode });
     } catch (error) {
         res.status(500).json({ message: 'Error uploading file', error: error.message });
@@ -219,6 +255,47 @@ router.post('/device-files', async (req, res) => {
     console.error('Error fetching device files:', error);
     res.status(500).json({ message: 'Error fetching device files' });
   }
+});
+
+// Clear recent history for a device
+router.post('/clear-recent-history', async (req, res) => {
+    try {
+        const { deviceId } = req.body;
+        await RecentHistory.findOneAndDelete({ deviceId });
+        res.json({ message: 'Recent history cleared successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error clearing recent history', error: error.message });
+    }
+});
+
+// Add file to device's recent history
+router.post('/add-to-recent/:deviceId', async (req, res) => {
+    try {
+        const { deviceId } = req.params;
+        const { fileId } = req.body;
+
+        let history = await RecentHistory.findOne({ deviceId });
+        
+        if (!history) {
+            history = new RecentHistory({
+                deviceId,
+                fileIds: [fileId]
+            });
+        } else {
+            // Keep only the 10 most recent files
+            if (!history.fileIds.includes(fileId)) {
+                history.fileIds.unshift(fileId);
+                if (history.fileIds.length > 10) {
+                    history.fileIds = history.fileIds.slice(0, 10);
+                }
+            }
+        }
+
+        await history.save();
+        res.json({ message: 'File added to recent history' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating recent history', error: error.message });
+    }
 });
 
 module.exports = router; 
