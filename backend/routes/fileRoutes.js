@@ -201,4 +201,24 @@ router.get('/info/:filename', async (req, res) => {
     }
 });
 
+// Get device-specific files
+router.post('/device-files', async (req, res) => {
+  try {
+    const { fileIds } = req.body;
+    
+    if (!Array.isArray(fileIds)) {
+      return res.status(400).json({ message: 'fileIds must be an array' });
+    }
+
+    const files = await File.find({
+      '_id': { $in: fileIds }
+    }).sort({ uploadDate: -1 });
+
+    res.json(files);
+  } catch (error) {
+    console.error('Error fetching device files:', error);
+    res.status(500).json({ message: 'Error fetching device files' });
+  }
+});
+
 module.exports = router; 

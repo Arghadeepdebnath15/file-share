@@ -50,6 +50,14 @@ const FileUpload: React.FC = () => {
     }
   };
 
+  const addToDeviceFiles = (fileId: string) => {
+    const deviceFiles = JSON.parse(localStorage.getItem('deviceFiles') || '[]');
+    if (!deviceFiles.includes(fileId)) {
+      deviceFiles.push(fileId);
+      localStorage.setItem('deviceFiles', JSON.stringify(deviceFiles));
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
 
@@ -73,6 +81,7 @@ const FileUpload: React.FC = () => {
       });
       setQrCode(response.data.qrCode);
       setDownloadUrl(`${API_URL}/api/files/download/${response.data.file.filename}`);
+      addToDeviceFiles(response.data.file._id);
       setShowQR(true);
     } catch (error: any) {
       console.error('Error uploading file:', error);

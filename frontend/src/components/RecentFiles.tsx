@@ -39,15 +39,29 @@ const RecentFiles: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
   const [showQRDialog, setShowQRDialog] = useState(false);
 
+  const getDeviceFiles = () => {
+    return JSON.parse(localStorage.getItem('deviceFiles') || '[]');
+  };
+
   const fetchRecentFiles = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/files/recent`);
+      const deviceFileIds = getDeviceFiles();
+      
+      if (deviceFileIds.length === 0) {
+        setFiles([]);
+        return;
+      }
+
+      const response = await axios.post(`${API_URL}/api/files/device-files`, {
+        fileIds: deviceFileIds
+      });
+      
       setFiles(response.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load recent files');
-      console.error('Error fetching recent files:', err);
+      setError('Failed to load your files');
+      console.error('Error fetching device files:', err);
     } finally {
       setLoading(false);
     }
@@ -107,10 +121,10 @@ const RecentFiles: React.FC = () => {
       <Card sx={{ mt: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Recent Uploads
+            Your Files
           </Typography>
           {files.length === 0 ? (
-            <Typography color="text.secondary">No files uploaded yet</Typography>
+            <Typography color="text.secondary">No files uploaded from this device yet</Typography>
           ) : (
             <List>
               {files.map((file, index) => (
