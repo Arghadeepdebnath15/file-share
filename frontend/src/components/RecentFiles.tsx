@@ -42,44 +42,47 @@ const RecentFiles: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
   const [showQRDialog, setShowQRDialog] = useState(false);
 
-  const getDeviceFiles = () => {
-    return JSON.parse(localStorage.getItem('deviceFiles') || '[]');
-  };
-
-  const removeFromDeviceFiles = (fileId: string) => {
-    const deviceFiles = getDeviceFiles();
-    const updatedFiles = deviceFiles.filter((id: string) => id !== fileId);
-    localStorage.setItem('deviceFiles', JSON.stringify(updatedFiles));
-  };
-
-  const handleRemoveFile = async (fileId: string) => {
-    if (window.confirm('Remove this file from device history?')) {
-      removeFromDeviceFiles(fileId);
-      await fetchRecentFiles();
+  const getDeviceId = () => {
+    let deviceId = localStorage.getItem('deviceId');
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('deviceId', deviceId);
     }
+    return deviceId;
   };
 
   const fetchRecentFiles = async () => {
     try {
       setLoading(true);
-      const deviceFileIds = getDeviceFiles();
+      const deviceId = getDeviceId();
+      const response = await axios.get(`${API_URL}/api/files/recent/${deviceId}`);
       
-      if (deviceFileIds.length === 0) {
-        setFiles([]);
-        return;
-      }
-
-      const response = await axios.post(`${API_URL}/api/files/device-files`, {
-        fileIds: deviceFileIds
-      });
+      // Store the recent files in localStorage for the device manager
+      localStorage.setItem('recentHistory', JSON.stringify(response.data));
       
       setFiles(response.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load your files');
-      console.error('Error fetching device files:', err);
+      setError('Failed to load your recent files');
+      console.error('Error fetching recent files:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (filename: string, originalName: string) => {
+    try {
+      // Add to recent history when downloading
+      const deviceId = getDeviceId();
+      const fileInfo = files.find(f => f.filename === filename);
+      if (fileInfo) {
+        await axios.post(`${API_URL}/api/files/add-to-recent/${deviceId}`, {
+          fileId: fileInfo._id
+        });
+      }
+      window.open(`${API_URL}/api/files/download/${filename}`, '_blank');
+    } catch (error) {
+      console.error('Error updating recent history:', error);
     }
   };
 
@@ -106,10 +109,6 @@ const RecentFiles: React.FC = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
-  };
-
-  const handleDownload = (filename: string, originalName: string) => {
-    window.open(`${API_URL}/api/files/download/${filename}`, '_blank');
   };
 
   const handleShowQR = (file: FileInfo) => {
@@ -199,13 +198,6 @@ const RecentFiles: React.FC = () => {
                         sx={{ mr: 1 }}
                       >
                         <DownloadIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={() => handleRemoveFile(file._id)}
-                        color="error"
-                        title="Remove from device history"
-                      >
-                        <DeleteIcon />
                       </IconButton>
                     </Box>
                   </ListItem>

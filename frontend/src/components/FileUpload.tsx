@@ -58,6 +58,15 @@ const FileUpload: React.FC = () => {
     }
   };
 
+  const getDeviceId = () => {
+    let deviceId = localStorage.getItem('deviceId');
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('deviceId', deviceId);
+    }
+    return deviceId;
+  };
+
   const handleUpload = async () => {
     if (!file) return;
 
@@ -68,9 +77,11 @@ const FileUpload: React.FC = () => {
     setUploadProgress(0);
 
     try {
+      const deviceId = getDeviceId();
       const response = await axios.post(`${API_URL}/api/files/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Device-Id': deviceId
         },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
@@ -81,7 +92,15 @@ const FileUpload: React.FC = () => {
       });
       setQrCode(response.data.qrCode);
       setDownloadUrl(`${API_URL}/api/files/download/${response.data.file.filename}`);
-      addToDeviceFiles(response.data.file._id);
+      
+      // Update recent history in localStorage
+      const currentHistory = JSON.parse(localStorage.getItem('recentHistory') || '[]');
+      currentHistory.unshift(response.data.file);
+      if (currentHistory.length > 10) {
+        currentHistory.length = 10;
+      }
+      localStorage.setItem('recentHistory', JSON.stringify(currentHistory));
+      
       setShowQR(true);
     } catch (error: any) {
       console.error('Error uploading file:', error);
