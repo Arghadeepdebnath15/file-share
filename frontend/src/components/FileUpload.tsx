@@ -11,6 +11,7 @@ import {
   DialogContent,
   LinearProgress,
   alpha,
+  useTheme,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import QRCode from 'react-qr-code';
@@ -26,6 +27,7 @@ const FileUpload: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const theme = useTheme();
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -118,13 +120,17 @@ const FileUpload: React.FC = () => {
           mt: 2,
           p: 2,
           border: '2px dashed',
-          borderColor: isDragging ? 'primary.main' : alpha('#2962ff', 0.2),
-          backgroundColor: isDragging ? alpha('#2962ff', 0.05) : '#ffffff',
+          borderColor: isDragging ? 'primary.main' : alpha(theme.palette.primary.main, 0.2),
+          backgroundColor: isDragging 
+            ? alpha(theme.palette.primary.main, 0.05) 
+            : theme.palette.mode === 'dark' 
+              ? alpha(theme.palette.background.paper, 0.6)
+              : theme.palette.background.paper,
           cursor: 'pointer',
           transition: 'all 0.3s ease',
           '&:hover': {
             borderColor: 'primary.main',
-            backgroundColor: alpha('#2962ff', 0.05),
+            backgroundColor: alpha(theme.palette.primary.main, 0.05),
             transform: 'translateY(-2px)',
           },
         }}
@@ -152,7 +158,7 @@ const FileUpload: React.FC = () => {
           <CloudUploadIcon 
             sx={{ 
               fontSize: 80, 
-              color: isDragging ? 'primary.main' : 'primary.light',
+              color: isDragging ? 'primary.main' : theme.palette.mode === 'dark' ? 'primary.light' : 'primary.main',
               mb: 3,
               transition: 'all 0.3s ease',
             }} 
@@ -168,7 +174,9 @@ const FileUpload: React.FC = () => {
               sx={{ 
                 mt: 2,
                 p: 2,
-                bgcolor: alpha('#2962ff', 0.05),
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? alpha(theme.palette.primary.main, 0.1)
+                  : alpha(theme.palette.primary.main, 0.05),
                 borderRadius: 2,
                 width: '100%',
                 maxWidth: '400px',
@@ -190,7 +198,9 @@ const FileUpload: React.FC = () => {
                 sx={{
                   height: 8,
                   borderRadius: 4,
-                  backgroundColor: alpha('#2962ff', 0.1),
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? alpha(theme.palette.primary.main, 0.2)
+                    : alpha(theme.palette.primary.main, 0.1),
                   '& .MuiLinearProgress-bar': {
                     borderRadius: 4,
                     backgroundImage: 'linear-gradient(45deg, #2962ff 30%, #7c4dff 90%)',
