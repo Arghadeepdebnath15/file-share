@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -42,22 +42,21 @@ const RecentFiles: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
   const [showQRDialog, setShowQRDialog] = useState(false);
 
-  const getDeviceId = () => {
+  const getDeviceId = useCallback(() => {
     let deviceId = localStorage.getItem('deviceId');
     if (!deviceId) {
       deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
       localStorage.setItem('deviceId', deviceId);
     }
     return deviceId;
-  };
+  }, []);
 
-  const fetchRecentFiles = async () => {
+  const fetchRecentFiles = useCallback(async () => {
     try {
       setLoading(true);
       const deviceId = getDeviceId();
       const response = await axios.get(`${API_URL}/api/files/recent/${deviceId}`);
       
-      // Store the recent files in localStorage for the device manager
       localStorage.setItem('recentHistory', JSON.stringify(response.data));
       
       setFiles(response.data);
@@ -68,11 +67,10 @@ const RecentFiles: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getDeviceId]);
 
   const handleDownload = async (filename: string, originalName: string) => {
     try {
-      // Add to recent history when downloading
       const deviceId = getDeviceId();
       const fileInfo = files.find(f => f.filename === filename);
       if (fileInfo) {
@@ -88,14 +86,40 @@ const RecentFiles: React.FC = () => {
 
   useEffect(() => {
     fetchRecentFiles();
-    // Refresh the list every 30 seconds
     const interval = setInterval(fetchRecentFiles, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchRecentFiles]);
 
-  const handleClearHistory = () => {
-    setFiles([]);
-    fetchRecentFiles();
+  const handleDeleteFile = async (fileId: string) => {
+    if (window.confirm('Are you sure you want to remove this file from your recent history?')) {
+      try {
+        const deviceId = getDeviceId();
+        const updatedFiles = files.filter(f => f._id !== fileId);
+        setFiles(updatedFiles);
+        localStorage.setItem('recentHistory', JSON.stringify(updatedFiles));
+        
+        // Update backend
+        await axios.post(`${API_URL}/api/files/remove-from-recent/${deviceId}`, {
+          fileId
+        });
+      } catch (error) {
+        console.error('Error removing file from history:', error);
+        fetchRecentFiles(); // Refresh the list if there was an error
+      }
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (window.confirm('Are you sure you want to clear all recent files from your history?')) {
+      try {
+        const deviceId = getDeviceId();
+        await axios.post(`${API_URL}/api/files/clear-recent-history`, { deviceId });
+        setFiles([]);
+        localStorage.setItem('recentHistory', '[]');
+      } catch (error) {
+        console.error('Error clearing recent history:', error);
+      }
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -119,7 +143,7 @@ const RecentFiles: React.FC = () => {
   if (loading) {
     return (
       <Card sx={{ mt: 3, position: 'relative' }}>
-        <DeviceManager onClearHistory={handleClearHistory} onRefresh={fetchRecentFiles} />
+        <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
         <CardContent>
           <Typography>Loading your files...</Typography>
         </CardContent>
@@ -130,7 +154,7 @@ const RecentFiles: React.FC = () => {
   if (error) {
     return (
       <Card sx={{ mt: 3, position: 'relative' }}>
-        <DeviceManager onClearHistory={handleClearHistory} onRefresh={fetchRecentFiles} />
+        <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
         <CardContent>
           <Typography color="error">{error}</Typography>
         </CardContent>
@@ -141,11 +165,24 @@ const RecentFiles: React.FC = () => {
   return (
     <>
       <Card sx={{ mt: 3, position: 'relative' }}>
-        <DeviceManager onClearHistory={handleClearHistory} onRefresh={fetchRecentFiles} />
+        <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Your Files
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Your Files
+            </Typography>
+            {files.length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteIcon />}
+                onClick={handleClearAll}
+              >
+                Clear All
+              </Button>
+            )}
+          </Box>
           {files.length === 0 ? (
             <Typography color="text.secondary">No files uploaded from this device yet</Typography>
           ) : (
@@ -198,6 +235,13 @@ const RecentFiles: React.FC = () => {
                         sx={{ mr: 1 }}
                       >
                         <DownloadIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleDeleteFile(file._id)}
+                        color="error"
+                        title="Remove from recent history"
+                      >
+                        <DeleteIcon />
                       </IconButton>
                     </Box>
                   </ListItem>

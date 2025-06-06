@@ -50,14 +50,6 @@ const FileUpload: React.FC = () => {
     }
   };
 
-  const addToDeviceFiles = (fileId: string) => {
-    const deviceFiles = JSON.parse(localStorage.getItem('deviceFiles') || '[]');
-    if (!deviceFiles.includes(fileId)) {
-      deviceFiles.push(fileId);
-      localStorage.setItem('deviceFiles', JSON.stringify(deviceFiles));
-    }
-  };
-
   const getDeviceId = () => {
     let deviceId = localStorage.getItem('deviceId');
     if (!deviceId) {
