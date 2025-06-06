@@ -14,11 +14,18 @@ import {
   DialogTitle,
   DialogContent,
   Button,
+  Container,
+  Paper,
+  alpha,
+  useTheme,
+  Fade,
+  Grow,
 } from '@mui/material';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import DownloadIcon from '@mui/icons-material/Download';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import FolderIcon from '@mui/icons-material/Folder';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
 import { API_URL } from '../config';
@@ -140,135 +147,787 @@ const RecentFiles: React.FC = () => {
     setShowQRDialog(true);
   };
 
+  const theme = useTheme();
+
   if (loading) {
     return (
-      <Card sx={{ mt: 3, position: 'relative' }}>
-        <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
-        <CardContent>
-          <Typography>Loading your files...</Typography>
-        </CardContent>
-      </Card>
+      <Container maxWidth={false} sx={{ 
+        height: '100vh',
+        py: 4,
+        px: { xs: 2, sm: 3, md: 4 },
+        bgcolor: alpha(theme.palette.primary.main, 0.03),
+      }}>
+        <Paper
+          elevation={0}
+          sx={{
+            height: '100%',
+            bgcolor: 'transparent',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
+          <Box sx={{ position: 'relative' }}>
+            <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
+          </Box>
+
+          <Card 
+            sx={{ 
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: 3,
+              boxShadow: theme.shadows[3],
+              bgcolor: 'background.paper',
+              overflow: 'hidden',
+            }}
+          >
+            <CardContent sx={{ p: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Box 
+                sx={{ 
+                  p: 3,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  bgcolor: alpha(theme.palette.primary.main, 0.02),
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <FolderIcon sx={{ color: theme.palette.primary.main, fontSize: 32 }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    Your Files
+                  </Typography>
+                </Box>
+                {files.length > 0 && (
+                  <Fade in>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="medium"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleClearAll}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        px: 3,
+                      }}
+                    >
+                      Clear All
+                    </Button>
+                  </Fade>
+                )}
+              </Box>
+
+              <Box sx={{ 
+                flexGrow: 1, 
+                overflow: 'auto',
+                px: 3,
+                py: 2,
+              }}>
+                {files.length === 0 ? (
+                  <Box 
+                    sx={{ 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 2,
+                      py: 8,
+                    }}
+                  >
+                    <FolderIcon sx={{ fontSize: 80, color: 'text.disabled' }} />
+                    <Typography variant="h6" color="text.secondary">
+                      No files uploaded from this device yet
+                    </Typography>
+                  </Box>
+                ) : (
+                  <List sx={{ py: 0 }}>
+                    {files.map((file, index) => (
+                      <Grow
+                        key={file._id}
+                        in
+                        timeout={300 + index * 100}
+                      >
+                        <Box>
+                          {index > 0 && <Divider />}
+                          <ListItem
+                            sx={{
+                              py: 3,
+                              px: 2,
+                              borderRadius: 2,
+                              '&:hover': {
+                                bgcolor: alpha(theme.palette.primary.main, 0.03),
+                              },
+                              transition: 'background-color 0.2s ease',
+                            }}
+                          >
+                            <ListItemText
+                              primary={
+                                <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
+                                  {file.originalName}
+                                </Typography>
+                              }
+                              secondary={
+                                <Box sx={{ mt: 1 }}>
+                                  <Chip
+                                    size="small"
+                                    label={formatFileSize(file.size)}
+                                    sx={{ 
+                                      mr: 1,
+                                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                      color: theme.palette.primary.main,
+                                    }}
+                                  />
+                                  <Chip
+                                    size="small"
+                                    icon={<FileDownloadIcon />}
+                                    label={`${file.downloadCount} downloads`}
+                                    sx={{ 
+                                      mr: 1,
+                                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                                      color: theme.palette.success.main,
+                                    }}
+                                  />
+                                  <Typography 
+                                    variant="caption" 
+                                    display="block" 
+                                    sx={{ 
+                                      mt: 1,
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    Uploaded: {formatDate(file.uploadDate)}
+                                  </Typography>
+                                </Box>
+                              }
+                            />
+                            <Box sx={{ 
+                              display: 'flex',
+                              gap: 1,
+                            }}>
+                              <IconButton
+                                onClick={() => handleShowQR(file)}
+                                color="primary"
+                                title="Show QR Code"
+                                sx={{ 
+                                  '&:hover': { 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <QrCodeIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleDownload(file.filename, file.originalName)}
+                                color="primary"
+                                title="Download file"
+                                sx={{ 
+                                  '&:hover': { 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <DownloadIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleDeleteFile(file._id)}
+                                color="error"
+                                title="Remove from recent history"
+                                sx={{ 
+                                  '&:hover': { 
+                                    bgcolor: alpha(theme.palette.error.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                          </ListItem>
+                        </Box>
+                      </Grow>
+                    ))}
+                  </List>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Dialog 
+            open={showQRDialog} 
+            onClose={() => setShowQRDialog(false)} 
+            maxWidth="sm" 
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                p: 2,
+              },
+            }}
+          >
+            <DialogTitle sx={{ 
+              textAlign: 'center',
+              fontWeight: 600,
+              pb: 3,
+            }}>
+              Scan QR Code to Download
+            </DialogTitle>
+            <DialogContent sx={{ textAlign: 'center', pb: 4 }}>
+              {selectedFile && (
+                <Fade in timeout={500}>
+                  <Box sx={{ 
+                    mt: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}>
+                    <Paper
+                      elevation={4}
+                      sx={{ 
+                        p: 4,
+                        borderRadius: 3,
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <QRCode 
+                        value={`${API_URL}/api/files/download/${selectedFile.filename}`}
+                        size={256}
+                      />
+                    </Paper>
+                    <Typography variant="body1" color="text.secondary">
+                      Scan this QR code to download <strong>{selectedFile.originalName}</strong>
+                    </Typography>
+                  </Box>
+                </Fade>
+              )}
+            </DialogContent>
+          </Dialog>
+        </Paper>
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <Card sx={{ mt: 3, position: 'relative' }}>
-        <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
-        <CardContent>
-          <Typography color="error">{error}</Typography>
-        </CardContent>
-      </Card>
+      <Container maxWidth={false} sx={{ 
+        height: '100vh',
+        py: 4,
+        px: { xs: 2, sm: 3, md: 4 },
+        bgcolor: alpha(theme.palette.primary.main, 0.03),
+      }}>
+        <Paper
+          elevation={0}
+          sx={{
+            height: '100%',
+            bgcolor: 'transparent',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
+          <Box sx={{ position: 'relative' }}>
+            <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
+          </Box>
+
+          <Card 
+            sx={{ 
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: 3,
+              boxShadow: theme.shadows[3],
+              bgcolor: 'background.paper',
+              overflow: 'hidden',
+            }}
+          >
+            <CardContent sx={{ p: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Box 
+                sx={{ 
+                  p: 3,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  bgcolor: alpha(theme.palette.primary.main, 0.02),
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <FolderIcon sx={{ color: theme.palette.primary.main, fontSize: 32 }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    Your Files
+                  </Typography>
+                </Box>
+                {files.length > 0 && (
+                  <Fade in>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="medium"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleClearAll}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        px: 3,
+                      }}
+                    >
+                      Clear All
+                    </Button>
+                  </Fade>
+                )}
+              </Box>
+
+              <Box sx={{ 
+                flexGrow: 1, 
+                overflow: 'auto',
+                px: 3,
+                py: 2,
+              }}>
+                {files.length === 0 ? (
+                  <Box 
+                    sx={{ 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 2,
+                      py: 8,
+                    }}
+                  >
+                    <FolderIcon sx={{ fontSize: 80, color: 'text.disabled' }} />
+                    <Typography variant="h6" color="text.secondary">
+                      No files uploaded from this device yet
+                    </Typography>
+                  </Box>
+                ) : (
+                  <List sx={{ py: 0 }}>
+                    {files.map((file, index) => (
+                      <Grow
+                        key={file._id}
+                        in
+                        timeout={300 + index * 100}
+                      >
+                        <Box>
+                          {index > 0 && <Divider />}
+                          <ListItem
+                            sx={{
+                              py: 3,
+                              px: 2,
+                              borderRadius: 2,
+                              '&:hover': {
+                                bgcolor: alpha(theme.palette.primary.main, 0.03),
+                              },
+                              transition: 'background-color 0.2s ease',
+                            }}
+                          >
+                            <ListItemText
+                              primary={
+                                <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
+                                  {file.originalName}
+                                </Typography>
+                              }
+                              secondary={
+                                <Box sx={{ mt: 1 }}>
+                                  <Chip
+                                    size="small"
+                                    label={formatFileSize(file.size)}
+                                    sx={{ 
+                                      mr: 1,
+                                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                      color: theme.palette.primary.main,
+                                    }}
+                                  />
+                                  <Chip
+                                    size="small"
+                                    icon={<FileDownloadIcon />}
+                                    label={`${file.downloadCount} downloads`}
+                                    sx={{ 
+                                      mr: 1,
+                                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                                      color: theme.palette.success.main,
+                                    }}
+                                  />
+                                  <Typography 
+                                    variant="caption" 
+                                    display="block" 
+                                    sx={{ 
+                                      mt: 1,
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    Uploaded: {formatDate(file.uploadDate)}
+                                  </Typography>
+                                </Box>
+                              }
+                            />
+                            <Box sx={{ 
+                              display: 'flex',
+                              gap: 1,
+                            }}>
+                              <IconButton
+                                onClick={() => handleShowQR(file)}
+                                color="primary"
+                                title="Show QR Code"
+                                sx={{ 
+                                  '&:hover': { 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <QrCodeIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleDownload(file.filename, file.originalName)}
+                                color="primary"
+                                title="Download file"
+                                sx={{ 
+                                  '&:hover': { 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <DownloadIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleDeleteFile(file._id)}
+                                color="error"
+                                title="Remove from recent history"
+                                sx={{ 
+                                  '&:hover': { 
+                                    bgcolor: alpha(theme.palette.error.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                          </ListItem>
+                        </Box>
+                      </Grow>
+                    ))}
+                  </List>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Dialog 
+            open={showQRDialog} 
+            onClose={() => setShowQRDialog(false)} 
+            maxWidth="sm" 
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                p: 2,
+              },
+            }}
+          >
+            <DialogTitle sx={{ 
+              textAlign: 'center',
+              fontWeight: 600,
+              pb: 3,
+            }}>
+              Scan QR Code to Download
+            </DialogTitle>
+            <DialogContent sx={{ textAlign: 'center', pb: 4 }}>
+              {selectedFile && (
+                <Fade in timeout={500}>
+                  <Box sx={{ 
+                    mt: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}>
+                    <Paper
+                      elevation={4}
+                      sx={{ 
+                        p: 4,
+                        borderRadius: 3,
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <QRCode 
+                        value={`${API_URL}/api/files/download/${selectedFile.filename}`}
+                        size={256}
+                      />
+                    </Paper>
+                    <Typography variant="body1" color="text.secondary">
+                      Scan this QR code to download <strong>{selectedFile.originalName}</strong>
+                    </Typography>
+                  </Box>
+                </Fade>
+              )}
+            </DialogContent>
+          </Dialog>
+        </Paper>
+      </Container>
     );
   }
 
   return (
-    <>
-      <Card sx={{ mt: 3, position: 'relative' }}>
-        <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              Your Files
-            </Typography>
-            {files.length > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                startIcon={<DeleteIcon />}
-                onClick={handleClearAll}
-              >
-                Clear All
-              </Button>
-            )}
-          </Box>
-          {files.length === 0 ? (
-            <Typography color="text.secondary">No files uploaded from this device yet</Typography>
-          ) : (
-            <List>
-              {files.map((file, index) => (
-                <React.Fragment key={file._id}>
-                  {index > 0 && <Divider />}
-                  <ListItem
+    <Container maxWidth={false} sx={{ 
+      height: '100vh',
+      py: 4,
+      px: { xs: 2, sm: 3, md: 4 },
+      bgcolor: alpha(theme.palette.primary.main, 0.03),
+    }}>
+      <Paper
+        elevation={0}
+        sx={{
+          height: '100%',
+          bgcolor: 'transparent',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+        }}
+      >
+        <Box sx={{ position: 'relative' }}>
+          <DeviceManager onClearHistory={handleClearAll} onRefresh={fetchRecentFiles} />
+        </Box>
+
+        <Card 
+          sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: 3,
+            boxShadow: theme.shadows[3],
+            bgcolor: 'background.paper',
+            overflow: 'hidden',
+          }}
+        >
+          <CardContent sx={{ p: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box 
+              sx={{ 
+                p: 3,
+                borderBottom: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                bgcolor: alpha(theme.palette.primary.main, 0.02),
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <FolderIcon sx={{ color: theme.palette.primary.main, fontSize: 32 }} />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  Your Files
+                </Typography>
+              </Box>
+              {files.length > 0 && (
+                <Fade in>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="medium"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleClearAll}
                     sx={{
-                      display: 'flex',
-                      flexDirection: { xs: 'column', sm: 'row' },
-                      alignItems: { xs: 'flex-start', sm: 'center' },
-                      py: 2,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
                     }}
                   >
-                    <ListItemText
-                      primary={file.originalName}
-                      secondary={
-                        <Box sx={{ mt: 1 }}>
-                          <Chip
-                            size="small"
-                            label={formatFileSize(file.size)}
-                            sx={{ mr: 1 }}
-                          />
-                          <Chip
-                            size="small"
-                            icon={<FileDownloadIcon />}
-                            label={`${file.downloadCount} downloads`}
-                            sx={{ mr: 1 }}
-                          />
-                          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                            Uploaded: {formatDate(file.uploadDate)}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <Box sx={{ mt: { xs: 2, sm: 0 }, ml: { xs: 0, sm: 2 }, display: 'flex' }}>
-                      <IconButton
-                        onClick={() => handleShowQR(file)}
-                        color="primary"
-                        title="Show QR Code"
-                        sx={{ mr: 1 }}
-                      >
-                        <QrCodeIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={() => handleDownload(file.filename, file.originalName)}
-                        color="primary"
-                        title="Download file"
-                        sx={{ mr: 1 }}
-                      >
-                        <DownloadIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={() => handleDeleteFile(file._id)}
-                        color="error"
-                        title="Remove from recent history"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </ListItem>
-                </React.Fragment>
-              ))}
-            </List>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={showQRDialog} onClose={() => setShowQRDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Scan QR Code to Download</DialogTitle>
-        <DialogContent sx={{ textAlign: 'center', pb: 3 }}>
-          {selectedFile && (
-            <Box sx={{ mt: 2 }}>
-              <QRCode 
-                value={`${API_URL}/api/files/download/${selectedFile.filename}`}
-                size={256}
-              />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Scan this QR code to download {selectedFile.originalName}
-              </Typography>
+                    Clear All
+                  </Button>
+                </Fade>
+              )}
             </Box>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+
+            <Box sx={{ 
+              flexGrow: 1, 
+              overflow: 'auto',
+              px: 3,
+              py: 2,
+            }}>
+              {files.length === 0 ? (
+                <Box 
+                  sx={{ 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2,
+                    py: 8,
+                  }}
+                >
+                  <FolderIcon sx={{ fontSize: 80, color: 'text.disabled' }} />
+                  <Typography variant="h6" color="text.secondary">
+                    No files uploaded from this device yet
+                  </Typography>
+                </Box>
+              ) : (
+                <List sx={{ py: 0 }}>
+                  {files.map((file, index) => (
+                    <Grow
+                      key={file._id}
+                      in
+                      timeout={300 + index * 100}
+                    >
+                      <Box>
+                        {index > 0 && <Divider />}
+                        <ListItem
+                          sx={{
+                            py: 3,
+                            px: 2,
+                            borderRadius: 2,
+                            '&:hover': {
+                              bgcolor: alpha(theme.palette.primary.main, 0.03),
+                            },
+                            transition: 'background-color 0.2s ease',
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
+                                {file.originalName}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box sx={{ mt: 1 }}>
+                                <Chip
+                                  size="small"
+                                  label={formatFileSize(file.size)}
+                                  sx={{ 
+                                    mr: 1,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    color: theme.palette.primary.main,
+                                  }}
+                                />
+                                <Chip
+                                  size="small"
+                                  icon={<FileDownloadIcon />}
+                                  label={`${file.downloadCount} downloads`}
+                                  sx={{ 
+                                    mr: 1,
+                                    bgcolor: alpha(theme.palette.success.main, 0.1),
+                                    color: theme.palette.success.main,
+                                  }}
+                                />
+                                <Typography 
+                                  variant="caption" 
+                                  display="block" 
+                                  sx={{ 
+                                    mt: 1,
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  Uploaded: {formatDate(file.uploadDate)}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                          <Box sx={{ 
+                            display: 'flex',
+                            gap: 1,
+                          }}>
+                            <IconButton
+                              onClick={() => handleShowQR(file)}
+                              color="primary"
+                              title="Show QR Code"
+                              sx={{ 
+                                '&:hover': { 
+                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                },
+                              }}
+                            >
+                              <QrCodeIcon />
+                            </IconButton>
+                            <IconButton
+                              onClick={() => handleDownload(file.filename, file.originalName)}
+                              color="primary"
+                              title="Download file"
+                              sx={{ 
+                                '&:hover': { 
+                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                },
+                              }}
+                            >
+                              <DownloadIcon />
+                            </IconButton>
+                            <IconButton
+                              onClick={() => handleDeleteFile(file._id)}
+                              color="error"
+                              title="Remove from recent history"
+                              sx={{ 
+                                '&:hover': { 
+                                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                                },
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Box>
+                        </ListItem>
+                      </Box>
+                    </Grow>
+                  ))}
+                </List>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Dialog 
+          open={showQRDialog} 
+          onClose={() => setShowQRDialog(false)} 
+          maxWidth="sm" 
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              p: 2,
+            },
+          }}
+        >
+          <DialogTitle sx={{ 
+            textAlign: 'center',
+            fontWeight: 600,
+            pb: 3,
+          }}>
+            Scan QR Code to Download
+          </DialogTitle>
+          <DialogContent sx={{ textAlign: 'center', pb: 4 }}>
+            {selectedFile && (
+              <Fade in timeout={500}>
+                <Box sx={{ 
+                  mt: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 3,
+                }}>
+                  <Paper
+                    elevation={4}
+                    sx={{ 
+                      p: 4,
+                      borderRadius: 3,
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <QRCode 
+                      value={`${API_URL}/api/files/download/${selectedFile.filename}`}
+                      size={256}
+                    />
+                  </Paper>
+                  <Typography variant="body1" color="text.secondary">
+                    Scan this QR code to download <strong>{selectedFile.originalName}</strong>
+                  </Typography>
+                </Box>
+              </Fade>
+            )}
+          </DialogContent>
+        </Dialog>
+      </Paper>
+    </Container>
   );
 };
 
