@@ -108,7 +108,7 @@ const RecentFiles: React.FC = () => {
   useEffect(() => {
     fetchRecentFiles();
     // Removed automatic refresh - now only refreshes on button click
-  }, [fetchRecentFiles]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchRecentFiles]);
 
   const handleDeleteFile = async (fileId: string) => {
     if (window.confirm('Are you sure you want to remove this file from your recent history?')) {
