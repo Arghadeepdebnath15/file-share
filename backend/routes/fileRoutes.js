@@ -55,7 +55,10 @@ router.get('/recent', async (req, res) => {
 router.get('/recent/:deviceId', async (req, res) => {
     try {
         const { deviceId } = req.params;
+        console.log('Fetching recent files for device ID:', deviceId);
+        
         let history = await RecentHistory.findOne({ deviceId }).populate('fileIds');
+        console.log('Found history:', history);
         
         if (!history) {
             history = { fileIds: [] };
@@ -63,6 +66,7 @@ router.get('/recent/:deviceId', async (req, res) => {
 
         res.json(history.fileIds);
     } catch (error) {
+        console.error('Error fetching recent files:', error);
         res.status(500).json({ message: 'Error fetching recent files', error: error.message });
     }
 });
@@ -93,20 +97,30 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
         // Add to device's recent history if deviceId is provided
         const deviceId = req.headers['device-id'];
+        console.log('Upload request - Device ID:', deviceId);
+        console.log('Upload request - File ID:', file._id);
+        
         if (deviceId) {
-            await RecentHistory.findOneAndUpdate(
-                { deviceId },
-                { 
-                    $push: { 
-                        fileIds: { 
-                            $each: [file._id],
-                            $position: 0,
-                            $slice: 10
+            try {
+                const result = await RecentHistory.findOneAndUpdate(
+                    { deviceId },
+                    { 
+                        $push: { 
+                            fileIds: { 
+                                $each: [file._id],
+                                $position: 0,
+                                $slice: 10
+                            }
                         }
-                    }
-                },
-                { upsert: true }
-            );
+                    },
+                    { upsert: true, new: true }
+                );
+                console.log('RecentHistory updated:', result);
+            } catch (error) {
+                console.error('Error updating RecentHistory:', error);
+            }
+        } else {
+            console.log('No device ID provided in upload request');
         }
 
         res.status(201).json({ file, qrCode });
@@ -117,6 +131,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
 // Mobile upload page route
 router.get('/upload-page', (req, res) => {
+    // Get device ID from URL parameter if provided
+    const deviceIdFromUrl = req.query.deviceId;
+    
     // Send a simple HTML form for mobile uploads
     const html = `
     <!DOCTYPE html>
@@ -164,6 +181,22 @@ router.get('/upload-page', (req, res) => {
                 text-align: center;
                 color: #666;
             }
+            .success-message {
+                margin-top: 20px;
+                padding: 15px;
+                background-color: #e8f5e8;
+                border: 1px solid #4caf50;
+                border-radius: 4px;
+                color: #2e7d32;
+            }
+            .error-message {
+                margin-top: 20px;
+                padding: 15px;
+                background-color: #ffebee;
+                border: 1px solid #f44336;
+                border-radius: 4px;
+                color: #c62828;
+            }
         </style>
     </head>
     <body>
@@ -176,27 +209,50 @@ router.get('/upload-page', (req, res) => {
             <div id="status" class="status"></div>
         </div>
         <script>
+            // Get device ID from URL parameter or generate new one
+            function getDeviceId() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const deviceIdFromUrl = urlParams.get('deviceId');
+                
+                if (deviceIdFromUrl) {
+                    // Use the device ID from URL parameter
+                    return deviceIdFromUrl;
+                } else {
+                    // Fallback to localStorage or generate new one
+                    let deviceId = localStorage.getItem('deviceId');
+                    if (!deviceId) {
+                        deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem('deviceId', deviceId);
+                    }
+                    return deviceId;
+                }
+            }
+
             document.getElementById('uploadForm').onsubmit = async (e) => {
                 e.preventDefault();
                 const status = document.getElementById('status');
                 status.textContent = 'Uploading...';
+                status.className = 'status';
                 
                 const formData = new FormData(e.target);
+                const deviceId = getDeviceId();
+                
                 try {
                     const response = await fetch('/api/files/upload', {
                         method: 'POST',
+                        headers: {
+                            'device-id': deviceId
+                        },
                         body: formData
                     });
                     const data = await response.json();
                     if (response.ok) {
-                        status.textContent = 'File uploaded successfully!';
-                        status.style.color = '#4caf50';
+                        status.innerHTML = '<div class="success-message">✅ File uploaded successfully!<br><small>This file will appear in your recent files on the main website.</small></div>';
                     } else {
                         throw new Error(data.message || 'Upload failed');
                     }
                 } catch (error) {
-                    status.textContent = 'Error: ' + error.message;
-                    status.style.color = '#f44336';
+                    status.innerHTML = '<div class="error-message">❌ Error: ' + error.message + '</div>';
                 }
             };
         </script>
@@ -235,6 +291,44 @@ router.get('/info/:filename', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Error getting file info', error: error.message });
     }
+});
+
+// Debug endpoint to check device IDs
+router.get('/debug/device-ids', async (req, res) => {
+  try {
+    const histories = await RecentHistory.find().populate('fileIds');
+    res.json({
+      totalHistories: histories.length,
+      histories: histories.map(h => ({
+        deviceId: h.deviceId,
+        fileCount: h.fileIds.length,
+        lastAccessed: h.lastAccessed
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching device IDs:', error);
+    res.status(500).json({ message: 'Error fetching device IDs', error: error.message });
+  }
+});
+
+// Debug endpoint to check all files
+router.get('/debug/all-files', async (req, res) => {
+  try {
+    const files = await File.find().sort({ uploadDate: -1 });
+    res.json({
+      totalFiles: files.length,
+      files: files.map(f => ({
+        _id: f._id,
+        filename: f.filename,
+        originalName: f.originalName,
+        uploadDate: f.uploadDate,
+        size: f.size
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching all files:', error);
+    res.status(500).json({ message: 'Error fetching all files', error: error.message });
+  }
 });
 
 // Get device-specific files

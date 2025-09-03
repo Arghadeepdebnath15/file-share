@@ -9,10 +9,21 @@ import ScannerIcon from '@mui/icons-material/Scanner';
 const UploadQRCode: React.FC = () => {
   const theme = useTheme();
   
-  // Get the base URL for the upload page
+  // Get device ID from localStorage
+  const getDeviceId = () => {
+    let deviceId = localStorage.getItem('deviceId');
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('deviceId', deviceId);
+    }
+    return deviceId;
+  };
+  
+  // Get the base URL for the upload page with device ID
+  const deviceId = getDeviceId();
   const uploadUrl = window.location.hostname === 'localhost'
-    ? 'http://localhost:5000/api/files/upload-page'
-    : `http://${window.location.hostname}:5000/api/files/upload-page`;
+    ? `http://localhost:5000/api/files/upload-page?deviceId=${deviceId}`
+    : `http://${window.location.hostname}:5000/api/files/upload-page?deviceId=${deviceId}`;
 
   return (
     <Zoom in={true}>

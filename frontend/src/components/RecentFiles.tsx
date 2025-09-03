@@ -26,6 +26,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderIcon from '@mui/icons-material/Folder';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
 import { API_URL } from '../config';
@@ -48,6 +49,7 @@ const RecentFiles: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
   const [showQRDialog, setShowQRDialog] = useState(false);
+  const [newFilesCount, setNewFilesCount] = useState(0);
 
   const getDeviceId = useCallback(() => {
     let deviceId = localStorage.getItem('deviceId');
@@ -64,9 +66,20 @@ const RecentFiles: React.FC = () => {
       const deviceId = getDeviceId();
       const response = await axios.get(`${API_URL}/api/files/recent/${deviceId}`);
       
-      localStorage.setItem('recentHistory', JSON.stringify(response.data));
+      const newFiles = response.data;
       
-      setFiles(response.data);
+      // Check for new files by comparing with current files state
+      setFiles(currentFiles => {
+        if (currentFiles.length > 0 && newFiles.length > currentFiles.length) {
+          const newFilesCount = newFiles.length - currentFiles.length;
+          setNewFilesCount(newFilesCount);
+          // Clear the notification after 5 seconds
+          setTimeout(() => setNewFilesCount(0), 5000);
+        }
+        return newFiles;
+      });
+      
+      localStorage.setItem('recentHistory', JSON.stringify(newFiles));
       setError(null);
     } catch (err) {
       setError('Failed to load your recent files');
@@ -93,9 +106,8 @@ const RecentFiles: React.FC = () => {
 
   useEffect(() => {
     fetchRecentFiles();
-    const interval = setInterval(fetchRecentFiles, 30000);
-    return () => clearInterval(interval);
-  }, [fetchRecentFiles]);
+    // Removed automatic refresh - now only refreshes on button click
+  }, []); // Empty dependency array to run only once on mount
 
   const handleDeleteFile = async (fileId: string) => {
     if (window.confirm('Are you sure you want to remove this file from your recent history?')) {
@@ -200,25 +212,61 @@ const RecentFiles: React.FC = () => {
                     Your Files
                   </Typography>
                 </Box>
-                {files.length > 0 && (
-                  <Fade in>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="medium"
-                      startIcon={<DeleteIcon />}
-                      onClick={handleClearAll}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                      }}
-                    >
-                      Clear All
-                    </Button>
-                  </Fade>
-                )}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="medium"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchRecentFiles}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
+                    }}
+                  >
+                    Refresh
+                  </Button>
+                  {files.length > 0 && (
+                    <Fade in>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="medium"
+                        startIcon={<DeleteIcon />}
+                        onClick={handleClearAll}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          px: 3,
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </Fade>
+                  )}
+                </Box>
               </Box>
+
+              {newFilesCount > 0 && (
+                <Box
+                  sx={{
+                    mx: 3,
+                    mt: 2,
+                    p: 2,
+                    bgcolor: 'success.light',
+                    color: 'success.contrastText',
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <Typography variant="body2">
+                    🎉 {newFilesCount} new file{newFilesCount > 1 ? 's' : ''} uploaded via QR code!
+                  </Typography>
+                </Box>
+              )}
 
               <Box sx={{ 
                 flexGrow: 1, 
@@ -461,24 +509,40 @@ const RecentFiles: React.FC = () => {
                     Your Files
                   </Typography>
                 </Box>
-                {files.length > 0 && (
-                  <Fade in>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="medium"
-                      startIcon={<DeleteIcon />}
-                      onClick={handleClearAll}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                      }}
-                    >
-                      Clear All
-                    </Button>
-                  </Fade>
-                )}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="medium"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchRecentFiles}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
+                    }}
+                  >
+                    Refresh
+                  </Button>
+                  {files.length > 0 && (
+                    <Fade in>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="medium"
+                        startIcon={<DeleteIcon />}
+                        onClick={handleClearAll}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          px: 3,
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </Fade>
+                  )}
+                </Box>
               </Box>
 
               <Box sx={{ 
@@ -719,26 +783,42 @@ const RecentFiles: React.FC = () => {
                 <FolderIcon sx={{ color: theme.palette.primary.main, fontSize: 32 }} />
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   Your Files
-          </Typography>
+                </Typography>
               </Box>
-              {files.length > 0 && (
-                <Fade in>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="medium"
-                    startIcon={<DeleteIcon />}
-                    onClick={handleClearAll}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      px: 3,
-                    }}
-                  >
-                    Clear All
-                  </Button>
-                </Fade>
-              )}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="medium"
+                  startIcon={<RefreshIcon />}
+                  onClick={fetchRecentFiles}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    px: 3,
+                  }}
+                >
+                  Refresh
+                </Button>
+                {files.length > 0 && (
+                  <Fade in>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="medium"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleClearAll}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        px: 3,
+                      }}
+                    >
+                      Clear All
+                    </Button>
+                  </Fade>
+                )}
+              </Box>
             </Box>
 
             <Box sx={{ 
