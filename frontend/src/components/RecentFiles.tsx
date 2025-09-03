@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -107,7 +108,7 @@ const RecentFiles: React.FC = () => {
   useEffect(() => {
     fetchRecentFiles();
     // Removed automatic refresh - now only refreshes on button click
-  }, []); // Empty dependency array to run only once on mount
+  }, [fetchRecentFiles]); // Include fetchRecentFiles in dependency array
 
   const handleDeleteFile = async (fileId: string) => {
     if (window.confirm('Are you sure you want to remove this file from your recent history?')) {

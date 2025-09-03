@@ -1,16 +1,15 @@
 import React from 'react';
-import { 
-  Container, 
-  CssBaseline, 
-  ThemeProvider, 
-  createTheme, 
-  Tabs, 
-  Tab, 
+import {
+  Container,
+  CssBaseline,
+  ThemeProvider,
+  createTheme,
+  Tabs,
+  Tab,
   Box,
   Paper,
   Typography,
   Divider,
-  Grid as MuiGrid,
   StyledEngineProvider,
   IconButton,
   useMediaQuery
