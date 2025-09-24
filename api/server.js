@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 5001;
 app.use(cors({
   origin: [
     'http://localhost:3000',
+    'http://192.168.0.103:3000',
     'http://localhost:5000',
     'https://filetnf.netlify.app'
   ],
