@@ -20,7 +20,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@types/react-datepicker": "^6.2.0",
