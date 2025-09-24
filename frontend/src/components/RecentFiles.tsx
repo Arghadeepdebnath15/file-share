@@ -65,10 +65,10 @@ const RecentFiles: React.FC = () => {
     try {
       setLoading(true);
       const deviceId = getDeviceId();
-      const response = await axios.get(`${API_URL}/api/files/recent/${deviceId}`);
-      
+      const response = await axios.get(`${API_URL}/api/files/recent/${deviceId}`, { withCredentials: true });
+
       const newFiles = response.data;
-      
+
       // Check for new files by comparing with current files state
       setFiles(currentFiles => {
         if (currentFiles.length > 0 && newFiles.length > currentFiles.length) {
@@ -79,7 +79,7 @@ const RecentFiles: React.FC = () => {
         }
         return newFiles;
       });
-      
+
       localStorage.setItem('recentHistory', JSON.stringify(newFiles));
       setError(null);
     } catch (err) {
@@ -97,7 +97,7 @@ const RecentFiles: React.FC = () => {
       if (fileInfo) {
         await axios.post(`${API_URL}/api/files/add-to-recent/${deviceId}`, {
           fileId: fileInfo._id
-        });
+        }, { withCredentials: true });
       }
       window.open(`${API_URL}/api/files/download/${filename}`, '_blank');
     } catch (error) {
@@ -117,11 +117,11 @@ const RecentFiles: React.FC = () => {
         const updatedFiles = files.filter(f => f._id !== fileId);
         setFiles(updatedFiles);
         localStorage.setItem('recentHistory', JSON.stringify(updatedFiles));
-        
+
         // Update backend
         await axios.post(`${API_URL}/api/files/remove-from-recent/${deviceId}`, {
           fileId
-        });
+        }, { withCredentials: true });
       } catch (error) {
         console.error('Error removing file from history:', error);
         fetchRecentFiles(); // Refresh the list if there was an error
@@ -133,7 +133,7 @@ const RecentFiles: React.FC = () => {
     if (window.confirm('Are you sure you want to clear all recent files from your history?')) {
       try {
         const deviceId = getDeviceId();
-        await axios.post(`${API_URL}/api/files/clear-recent-history`, { deviceId });
+        await axios.post(`${API_URL}/api/files/clear-recent-history`, { deviceId }, { withCredentials: true });
         setFiles([]);
         localStorage.setItem('recentHistory', '[]');
       } catch (error) {
